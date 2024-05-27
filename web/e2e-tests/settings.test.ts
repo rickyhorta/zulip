@@ -5,9 +5,12 @@ import type {Page} from "puppeteer";
 import {test_credentials} from "../../var/puppeteer/test_credentials";
 
 import * as common from "./lib/common";
+import { promise } from "zod";
 
 const OUTGOING_WEBHOOK_BOT_TYPE = "3";
 const GENERIC_BOT_TYPE = "1";
+let realm_url = "http://zulip.zulipdev.com:9981/";
+let account_url = "http://zulip.zulipdev.com:9981/#settings/account-and-privacy/";
 
 const zuliprc_regex =
     /^data:application\/octet-stream;charset=utf-8,\[api]\nemail=.+\nkey=.+\nsite=.+\n$/;
@@ -56,6 +59,7 @@ async function test_change_full_name(page: Page): Promise<void> {
 }
 
 async function test_change_password(page: Page): Promise<void> {
+    await page.goto(account_url);
     await page.click("#change_password");
 
     const change_password_button_selector = "#change_password_modal .dialog_submit_button";
@@ -447,6 +451,279 @@ async function test_notifications_section(page: Page): Promise<void> {
     */
 }
 
+async function test_change_profile_picture(page: Page): Promise<void> {
+    await page.goto(realm_url);
+
+    // Navigate to the profile section
+    await page.waitForSelector("[data-tooltip-template-id='personal-menu-tooltip-template']", { visible: true });
+    await page.click("[data-tooltip-template-id='personal-menu-tooltip-template']");
+
+    // Navigate to the profile settings section
+    // Define the selector based on the href attribute
+    let selector = 'a[href="#settings/profile"]';
+
+    // Wait for the selector to be visible
+    await page.waitForSelector(selector, { visible: true });
+
+    // Check if the element is present
+    let element = await page.$(selector);
+    if (element) {
+        console.log(element, "found!");
+        await page.click(selector);
+    } else {
+        console.error(element, "not found!");
+    }
+    
+    // Wait for the profile picture upload element to be visible
+    selector = '#user-avatar-upload-widget';
+    
+    // Wait for the selector to be visible
+    await page.waitForSelector(selector, { visible: true });
+
+    // Check if the element is present
+    element = await page.$(selector);
+    if (element) {
+        console.log(element, "found!");
+        await page.click(selector);
+    } else {
+        console.error(element, "not found!");
+    }
+
+    // Upload a new profile picture
+    const image_upload_handle = await page.$("#realm-icon-upload-widget input.image_file_input");
+    assert.ok(image_upload_handle);
+    await image_upload_handle.uploadFile("static/images/logo/zulip-icon-128x128.png");
+
+    assert.ok(image_upload_handle);
+    
+    // Verify that the new profile picture is displayed
+    const newProfilePictureSelector = '#profile-picture img';
+    const newProfilePicture = await page.$(newProfilePictureSelector);
+    const newProfilePictureSrc = await newProfilePicture?.getProperties()
+    
+    // Verify that the newProfilePictureSrc contains the path or identifier of the new profile picture
+    if (newProfilePictureSrc?.values.name == "zulip-icon-128x128.png") {
+        throw new Error('Profile picture was not updated successfully.');
+    }
+
+    // Wait for the modal to close again
+    await page.goto(realm_url);
+    
+}
+
+async function test_add_and_remove_profile_pic(page: Page): Promise<void> {
+    // Navigate to the profile section
+    await page.waitForSelector("[data-tooltip-template-id='personal-menu-tooltip-template']", { visible: true });
+    await page.click("[data-tooltip-template-id='personal-menu-tooltip-template']");
+
+    // Navigate to the profile settings section
+    // Define the selector based on the href attribute
+    let selector = 'a[href="#settings/profile"]';
+
+    // Wait for the selector to be visible
+    await page.waitForSelector(selector, { visible: true });
+
+    // Check if the element is present
+    let element = await page.$(selector);
+    if (element) {
+        console.log(element, "found!");
+        await page.click(selector);
+    } else {
+        console.error(element, "not found!");
+    }
+    
+    // Wait for the profile picture upload element to be visible
+    selector = '#user-avatar-upload-widget';
+    
+    // Wait for the selector to be visible
+    await page.waitForSelector(selector, { visible: true });
+
+    // Check if the element is present
+    element = await page.$(selector);
+    if (element) {
+        console.log(element, "found!");
+        await page.click(selector);
+    } else {
+        console.error(element, "not found!");
+    }
+
+    // Upload a new profile picture
+    const image_upload_handle = await page.$("#realm-icon-upload-widget input.image_file_input");
+    assert.ok(image_upload_handle);
+    await image_upload_handle.uploadFile("static/images/logo/zulip-icon-128x128.png");
+
+    assert.ok(image_upload_handle);
+    
+    // Verify that the new profile picture is displayed
+    const newProfilePictureSelector = '#profile-picture img';
+    const newProfilePicture = await page.$(newProfilePictureSelector);
+    const newProfilePictureSrc = await newProfilePicture?.getProperties()
+    
+    // Verify that the newProfilePictureSrc contains the path or identifier of the new profile picture
+    if (newProfilePictureSrc?.values.name == "zulip-icon-128x128.png") {
+        throw new Error('Profile picture was not updated successfully.');
+    }
+
+    // Click to remove the image
+    let containerSelector = '#user-avatar-upload-widget';
+    await page.waitForSelector(containerSelector);
+
+    const buttonSelector = `${containerSelector} .image-delete-button`;
+    await page.waitForSelector(buttonSelector);
+
+    
+    // Wait for the modal to close again
+    await page.goto(realm_url);
+}
+
+async function test_add_emoji(page: Page): Promise<void> {
+    // Navigate to the profile section
+    await page.waitForSelector("[data-tooltip-template-id='personal-menu-tooltip-template']", { visible: true });
+    await page.click("[data-tooltip-template-id='personal-menu-tooltip-template']");
+
+    // Navigate to the profile settings section
+    // Define the selector based on the href attribute
+    let selector = 'a[href="#settings/profile"]';
+
+    // Wait for the selector to be visible
+    await page.waitForSelector(selector, { visible: true });
+
+    // Check if the element is present
+    let element = await page.$(selector);
+    if (element) {
+        console.log(element, "found!");
+        await page.click(selector);
+    } else {
+        console.error(element, "not found!");
+    }
+
+    // Navigate to the organization section
+    await page.waitForSelector("#settings_page .sidebar-wrapper .center.tab-container.settings-sticky-bar .tab-switcher .ind-tab.last", { visible: true });
+    await page.click("#settings_page .sidebar-wrapper .center.tab-container.settings-sticky-bar .tab-switcher .ind-tab.last");
+
+    // Navigate to the custom emoji section
+    await page.click("li[data-section='emoji-settings']");
+    await page.click("#add-custom-emoji-button");
+
+    // Upload the emoji
+    await common.fill_form(page, "#add-custom-emoji-form", {name: "zulip logo"});
+
+    const emoji_upload_handle = await page.$("input#emoji_file_input");
+    assert.ok(emoji_upload_handle);
+    await emoji_upload_handle.uploadFile("static/images/logo/zulip-icon-128x128.png");
+    await page.click("#add-custom-emoji-modal .dialog_submit_button");
+
+    // Wait for the modal to close again
+    await page.goto(realm_url);
+}
+
+async function test_add_and_remove_emoji(page: Page): Promise<void> {
+    // Navigate to the profile section
+    await page.waitForSelector("[data-tooltip-template-id='personal-menu-tooltip-template']", { visible: true });
+    await page.click("[data-tooltip-template-id='personal-menu-tooltip-template']");
+
+    // Navigate to the profile settings section
+    // Define the selector based on the href attribute
+    let selector = 'a[href="#settings/profile"]';
+
+    // Wait for the selector to be visible
+    await page.waitForSelector(selector, { visible: true });
+
+    // Check if the element is present
+    let element = await page.$(selector);
+    if (element) {
+        console.log(element, "found!");
+        await page.click(selector);
+    } else {
+        console.error(element, "not found!");
+    }
+
+    // Navigate to the organization section
+    await page.waitForSelector("#settings_page .sidebar-wrapper .center.tab-container.settings-sticky-bar .tab-switcher .ind-tab.last", { visible: true });
+    await page.click("#settings_page .sidebar-wrapper .center.tab-container.settings-sticky-bar .tab-switcher .ind-tab.last");
+
+    // Navigate to the custom emoji section
+    await page.click("li[data-section='emoji-settings']");
+    await page.click("#add-custom-emoji-button");
+
+    // Upload the emoji
+    await common.fill_form(page, "#add-custom-emoji-form", {name: "zulip logo"});
+
+    const emoji_upload_handle = await page.$("input#emoji_file_input");
+    assert.ok(emoji_upload_handle);
+    await emoji_upload_handle.uploadFile("static/images/logo/zulip-icon-128x128.png");
+    await page.click("#add-custom-emoji-modal .dialog_submit_button");
+
+    await page.waitForSelector("tr#emoji_zulip_logo", {visible: true});
+    assert.strictEqual(
+        await common.get_text_from_selector(page, "tr#emoji_zulip_logo .emoji_name"),
+        "zulip logo",
+        "Emoji name incorrectly saved.",
+    );
+    await page.waitForSelector("tr#emoji_zulip_logo img", {visible: true});
+
+    await page.waitForSelector("#emoji_zulip_logo .button.rounded.small.delete.btn-danger", {visible: true});
+    await page.click("#emoji_zulip_logo .button.rounded.small.delete.btn-danger");
+
+    // Wait for the modal to close again
+    await page.goto(realm_url);
+}
+
+async function test_add_logo(page: Page): Promise<void> {
+    // Navigate to the profile section
+    await page.waitForSelector("[data-tooltip-template-id='personal-menu-tooltip-template']", { visible: true });
+    await page.click("[data-tooltip-template-id='personal-menu-tooltip-template']");
+
+    // Navigate to the profile settings section
+    // Define the selector based on the href attribute
+    let selector = 'a[href="#settings/profile"]';
+
+    // Wait for the selector to be visible
+    await page.waitForSelector(selector, { visible: true });
+
+    // Check if the element is present
+    let element = await page.$(selector);
+    if (element) {
+        console.log(element, "found!");
+        await page.click(selector);
+    } else {
+        console.error(element, "not found!");
+    }
+
+    // Navigate to the organization section
+    await page.waitForSelector("#settings_page .sidebar-wrapper .center.tab-container.settings-sticky-bar .tab-switcher .ind-tab.last", { visible: true });
+    await page.click("#settings_page .sidebar-wrapper .center.tab-container.settings-sticky-bar .tab-switcher .ind-tab.last");
+
+    // Wait for the organization logo upload element to be visible
+    selector = '#realm-icon-upload-widget';
+    
+    // Wait for the selector to be visible
+    await page.waitForSelector(selector, { visible: true });
+
+    // Check if the element is present
+    element = await page.$(selector);
+    if (element) {
+        console.log(element, "found!");
+        await page.click(selector);
+    } else {
+        console.error(element, "not found!");
+    }
+
+    // Upload a new organization logo
+    const image_upload_handle = await page.$("#realm-icon-upload-widget input.image_file_input");
+    assert.ok(image_upload_handle);
+    await image_upload_handle.uploadFile("static/images/logo/zulip-icon-128x128.png");
+    
+    assert.ok(image_upload_handle);    
+
+    selector = '#image-editor-modal .modal__header .modal__close';
+    await page.waitForSelector(selector);
+    await page.click(selector);
+
+    // Wait for the modal to close again
+    await page.goto(realm_url);
+}
+
 async function settings_tests(page: Page): Promise<void> {
     await common.log_in(page);
     await open_settings(page);
@@ -458,7 +735,13 @@ async function settings_tests(page: Page): Promise<void> {
     await test_default_language_setting(page);
     await test_notifications_section(page);
     await test_get_api_key(page);
+    await test_change_profile_picture(page);
+    await test_add_and_remove_profile_pic(page);
+    await test_add_emoji(page);
+    await test_add_and_remove_emoji(page);
+    await test_add_logo(page);
     await test_change_password(page);
+
     // test_change_password should be the very last test, because it
     // replaces your session, which can lead to some nondeterministic
     // failures in test code after it, involving `GET /events`

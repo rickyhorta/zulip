@@ -265,9 +265,8 @@ function show_modal(): void {
         const formData = new FormData();
         const files = $<HTMLInputElement>("input#emoji_file_input")[0].files;
         assert(files !== null);
-        for (const [i, file] of [...files].entries()) {
-            formData.append("file-" + i, file);
-        }
+        console.log(upload_widget.get_edited_image());
+        formData.append("file-0", upload_widget.get_edited_image());
 
         if (is_default_emoji(emoji.name)) {
             if (!current_user.is_admin) {

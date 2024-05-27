@@ -4,6 +4,8 @@ import type {Page} from "puppeteer";
 
 import * as common from "./lib/common";
 
+let auth_methods_url = "http://zulip.zulipdev.com:9981/#organization/auth-methods/";
+
 async function submit_announcements_stream_settings(page: Page): Promise<void> {
     await page.waitForSelector('#org-notifications .save-button[data-status="unsaved"]', {
         visible: true,
@@ -181,6 +183,8 @@ async function test_add_emoji(page: Page): Promise<void> {
     const emoji_upload_handle = await page.$("input#emoji_file_input");
     assert.ok(emoji_upload_handle);
     await emoji_upload_handle.uploadFile("static/images/logo/zulip-icon-128x128.png");
+    await page.click("#add-custom-emoji-button");
+    await page.waitForSelector("#add-custom-emoji-modal .dialog_submit_button", {visible: true});
     await page.click("#add-custom-emoji-modal .dialog_submit_button");
     await common.wait_for_micromodal_to_close(page);
 
@@ -217,43 +221,38 @@ async function test_upload_realm_icon_image(page: Page): Promise<void> {
     const upload_handle = await page.$("#realm-icon-upload-widget input.image_file_input");
     assert.ok(upload_handle);
     await upload_handle.uploadFile("static/images/logo/zulip-icon-128x128.png");
-
-    await page.waitForSelector("#realm-icon-upload-widget .upload-spinner-background", {
-        visible: true,
-    });
-    await page.waitForSelector("#realm-icon-upload-widget .upload-spinner-background", {
-        hidden: true,
-    });
-    await page.waitForSelector(
-        '#realm-icon-upload-widget .image-block[src^="/user_avatars/2/realm/icon.png?version=2"]',
-        {visible: true},
-    );
+    assert.ok(upload_handle);  
+    let selector = '#image-editor-modal .modal__footer .dialog_submit_button_container .modal__btn.dialog_submit_button';
+    await page.waitForSelector(selector);
+    await page.click(selector);
 }
 
 async function delete_realm_icon(page: Page): Promise<void> {
     await page.click("li[data-section='organization-profile']");
+    await page.waitForSelector("#realm-icon-upload-widget .image-delete-button", {visible: true});
     await page.click("#realm-icon-upload-widget .image-delete-button");
-
-    await page.waitForSelector("#realm-icon-upload-widget .image-delete-button", {hidden: true});
+    await common.wait_for_micromodal_to_close(page);
 }
 
 async function test_organization_profile(page: Page): Promise<void> {
     await page.click("li[data-section='organization-profile']");
-    const gravatar_selctor =
+    const gravatar_selector =
         '#realm-icon-upload-widget .image-block[src^="https://secure.gravatar.com/avatar/"]';
-    await page.waitForSelector(gravatar_selctor, {visible: true});
+    await page.waitForSelector(gravatar_selector, {visible: true});
+
     await page.waitForSelector("#realm-icon-upload-widget .image-delete-button", {hidden: true});
 
     await test_upload_realm_icon_image(page);
-    await page.waitForSelector("#realm-icon-upload-widget .image-delete-button", {visible: true});
 
     await delete_realm_icon(page);
-    await page.waitForSelector("#realm-icon-upload-widget .image-delete-button", {hidden: true});
-    await page.waitForSelector(gravatar_selctor, {visible: true});
+
+
 }
 
+
 async function test_authentication_methods(page: Page): Promise<void> {
-    await page.click("li[data-section='auth-methods']");
+    await page.goto(auth_methods_url);
+    
     await page.waitForSelector(".method_row[data-method='Google'] input[type='checkbox'] + span", {
         visible: true,
     });

@@ -772,6 +772,18 @@ input[type="checkbox"] {
     vertical-align: middle;
 }
 
+.uppy-DashboardContent-back,
+.uppy-DashboardContent-save {
+    display: none;
+}
+.uppy-DashboardContent-bar .uppy-crop-tool {
+    display: none !important;
+}
+
+.uppy-ImageCropper-controls {
+    padding-top: 0px;
+}
+
 .add-new-linkifier-box,
 .add-new-playground-box {
     & button {
